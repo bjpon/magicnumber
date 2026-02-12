@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -88,8 +89,6 @@
             font-weight: 800; font-size: 14px;
             border-top: 3px double #1a1a1a; border-bottom: none; padding-top: 10px;
         }
-        .location-cell { font-weight: 600; color: #1a1a1a; vertical-align: top; }
-
         .hidden { display: none; }
 
         .toast {
@@ -121,14 +120,6 @@
             </div>
 
             <div class="options-row">
-                <div class="option-group">
-                    <label for="locationName">Location / Retailer</label>
-                    <input type="text" id="locationName" placeholder="e.g., Dispensary Name" style="width:220px;">
-                </div>
-                <div class="option-group">
-                    <label for="yearLabel">Column Label</label>
-                    <input type="text" id="yearLabel" value="2025" style="width:80px;">
-                </div>
                 <div class="option-group">
                     <label for="dollarCol">Dollar Source</label>
                     <select id="dollarCol" style="width:160px;">
@@ -280,13 +271,10 @@
         // ── Render table ──
         function renderTable(result) {
             const { segments, orderedSegs, segTotals, grand } = result;
-            const location = $('locationName').value.trim();
-            const yearLabel = $('yearLabel').value.trim() || '2025';
 
             let html = `<thead><tr>
-                <th style="min-width:140px;"></th>
                 <th style="min-width:280px;">Product</th>
-                <th class="text-right">${yearLabel}</th>
+                <th class="text-right">Dollars</th>
                 <th class="text-right">Segment Total</th>
                 <th class="text-right">Seg %</th>
                 <th class="col-gap"></th>
@@ -294,10 +282,6 @@
                 <th class="text-right">Segment Total</th>
                 <th class="text-right">Seg %</th>
             </tr></thead><tbody>`;
-
-            let isFirstRow = true;
-            let totalProductRows = 0;
-            for (const seg of orderedSegs) totalProductRows += segments[seg].length;
 
             for (const seg of orderedSegs) {
                 const items = segments[seg];
@@ -307,20 +291,12 @@
                     const isLast = idx === items.length - 1;
                     const cls = isLast ? ' class="segment-last"' : '';
 
-                    // Location cell: only on the very first data row, rowspan covers the rest
-                    let locCell = '';
-                    if (isFirstRow) {
-                        locCell = `<td class="location-cell" rowspan="${totalProductRows}">${location || ''}</td>`;
-                        isFirstRow = false;
-                    }
-
                     const segTotalDollar = isLast ? `<td class="text-right segment-total-cell">${fmtDollars(st.dollars)}</td>` : '<td></td>';
                     const segPctDollar   = isLast ? `<td class="text-right segment-total-cell">${fmtPct(st.dollarPct)}</td>` : '<td></td>';
                     const segTotalUnit   = isLast ? `<td class="text-right segment-total-cell">${fmtUnits(st.units)}</td>` : '<td></td>';
                     const segPctUnit     = isLast ? `<td class="text-right segment-total-cell">${fmtPct(st.unitPct)}</td>` : '<td></td>';
 
                     html += `<tr${cls}>
-                        ${locCell}
                         <td>${item.product}</td>
                         <td class="text-right">${fmtDollars(item.dollars)}</td>
                         ${segTotalDollar}${segPctDollar}
@@ -333,7 +309,6 @@
 
             // Grand total row
             html += `<tr class="grand-total">
-                <td></td>
                 <td>Grand</td>
                 <td></td>
                 <td class="text-right">${fmtDollars(grand.dollars)}</td>
@@ -351,25 +326,18 @@
         // ── Generate CSV string ──
         function generateCSV(result) {
             const { segments, orderedSegs, segTotals, grand } = result;
-            const location = $('locationName').value.trim();
-            const yearLabel = $('yearLabel').value.trim() || '2025';
             const rows = [];
 
             // Header
-            rows.push(['', 'Product', yearLabel, 'Segment Total', 'Seg %', '', 'Units', 'Segment Total', 'Seg %']);
+            rows.push(['Product', 'Dollars', 'Segment Total', 'Seg %', '', 'Units', 'Segment Total', 'Seg %']);
 
-            let isFirst = true;
             for (const seg of orderedSegs) {
                 const items = segments[seg];
                 const st = segTotals[seg];
 
                 items.forEach((item, idx) => {
                     const isLast = idx === items.length - 1;
-                    const loc = isFirst ? location : '';
-                    if (isFirst) isFirst = false;
-
                     rows.push([
-                        loc,
                         item.product,
                         Math.round(item.dollars),
                         isLast ? Math.round(st.dollars) : '',
@@ -383,7 +351,7 @@
             }
 
             // Grand total
-            rows.push(['', 'Grand', '', Math.round(grand.dollars), '', '', '', Math.round(grand.units), '']);
+            rows.push(['Grand', '', Math.round(grand.dollars), '', '', '', Math.round(grand.units), '']);
 
             // Convert to CSV
             return rows.map(r => r.map(cell => {
@@ -395,24 +363,17 @@
         // ── Generate TSV for clipboard ──
         function generateTSV(result) {
             const { segments, orderedSegs, segTotals, grand } = result;
-            const location = $('locationName').value.trim();
-            const yearLabel = $('yearLabel').value.trim() || '2025';
             const rows = [];
 
-            rows.push(['', 'Product', yearLabel, 'Segment Total', 'Seg %', '', 'Units', 'Segment Total', 'Seg %']);
+            rows.push(['Product', 'Dollars', 'Segment Total', 'Seg %', '', 'Units', 'Segment Total', 'Seg %']);
 
-            let isFirst = true;
             for (const seg of orderedSegs) {
                 const items = segments[seg];
                 const st = segTotals[seg];
 
                 items.forEach((item, idx) => {
                     const isLast = idx === items.length - 1;
-                    const loc = isFirst ? location : '';
-                    if (isFirst) isFirst = false;
-
                     rows.push([
-                        loc,
                         item.product,
                         fmtDollars(item.dollars),
                         isLast ? fmtDollars(st.dollars) : '',
@@ -425,7 +386,7 @@
                 });
             }
 
-            rows.push(['', 'Grand', '', fmtDollars(grand.dollars), '', '', '', fmtUnits(grand.units), '']);
+            rows.push(['Grand', '', fmtDollars(grand.dollars), '', '', '', fmtUnits(grand.units), '']);
 
             return rows.map(r => r.join('\t')).join('\n');
         }
@@ -479,9 +440,8 @@
         fileInput.addEventListener('change', e => { if (e.target.files.length) handleFile(e.target.files[0]); });
 
         // Re-process when options change
-        ['dollarCol', 'unitCol', 'locationName', 'yearLabel'].forEach(id => {
+        ['dollarCol', 'unitCol'].forEach(id => {
             $(id).addEventListener('change', () => { if (fileInput.files.length) handleFile(fileInput.files[0]); });
-            $(id).addEventListener('input', () => { if (fileInput.files.length) handleFile(fileInput.files[0]); });
         });
 
         // Download CSV
@@ -491,9 +451,8 @@
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            const loc = $('locationName').value.trim();
             a.href = url;
-            a.download = (loc ? loc.replace(/[^a-zA-Z0-9]/g, '_') + '_' : '') + 'aggregated_sales.csv';
+            a.download = 'aggregated_sales.csv';
             a.click();
             URL.revokeObjectURL(url);
             showToast('CSV downloaded!');
